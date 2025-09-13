@@ -1,0 +1,17 @@
+# Maven
+target/
+*.class
+*.jar
+*.war
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+
+# Credenciais (não versionar!)
+*.json
+.env
