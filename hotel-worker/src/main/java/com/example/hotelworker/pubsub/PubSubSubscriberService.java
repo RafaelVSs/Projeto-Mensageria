@@ -1,13 +1,11 @@
 package com.example.hotelworker.pubsub;
 
 import com.example.hotelworker.service.MessageProcessor;
-import com.google.cloud.pubsub.v1.AckReplyConsumer;
-import com.google.cloud.pubsub.v1.MessageReceiver;
 import com.google.cloud.pubsub.v1.Subscriber;
 import com.google.pubsub.v1.ProjectSubscriptionName;
-import com.google.pubsub.v1.PubsubMessage;
 
 public class PubSubSubscriberService {
+
     private final String projectId;
     private final String subscriptionId;
     private final MessageProcessor processor;
@@ -20,31 +18,29 @@ public class PubSubSubscriberService {
     }
 
     public void start() {
+        // Criar objeto ProjectSubscriptionName usando projectId e subscriptionId separados
         ProjectSubscriptionName subscriptionName = ProjectSubscriptionName.of(projectId, subscriptionId);
 
-        MessageReceiver receiver = new MessageReceiver() {
-            @Override
-            public void receiveMessage(PubsubMessage message, AckReplyConsumer consumer) {
-                String messageId = message.getMessageId();
-                String data = message.getData().toStringUtf8();
-                System.out.println("Received messageId=" + messageId);
-                try {
-                    processor.process(messageId, data);
-                    consumer.ack();
-                    System.out.println("Acked messageId=" + messageId);
-                } catch (Exception e) {
-                    System.err.println("Processing failed for messageId=" + messageId + ": " + e.getMessage());
-                    e.printStackTrace();
-                    consumer.nack();
-                }
+        // Criar Subscriber
+        subscriber = Subscriber.newBuilder(subscriptionName, (message, consumer) -> {
+            try {
+                processor.processMessage(message); // processa sua mensagem
+                consumer.ack(); // ACK da mensagem
+            } catch (Exception e) {
+                consumer.nack(); // NACK se houver erro
+                e.printStackTrace();
             }
-        };
+        }).build();
 
-        subscriber = Subscriber.newBuilder(subscriptionName, receiver).build();
+        // Inicia o Subscriber
         subscriber.startAsync().awaitRunning();
+        System.out.println("Subscriber iniciado para: " + subscriptionName);
     }
 
     public void stop() {
-        if (subscriber != null) subscriber.stopAsync();
+        if (subscriber != null) {
+            subscriber.stopAsync();
+            System.out.println("Subscriber parado.");
+        }
     }
 }
